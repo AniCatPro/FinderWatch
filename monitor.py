@@ -10,13 +10,14 @@ class Monitor:
         self.running = False
         self.interval = 30  # Период в секундах для проверки
 
-    def start(self, source_folder, target_folder, exclude_manager):
+    def start(self, source_folders, target_folders, exclude_manager):
         self.exclude_manager = exclude_manager
         self.running = True
 
-        # Начинаем периодический мониторинг
+        # Начинаем периодический мониторинг для всех папок
         while self.running:
-            self.check_changes(source_folder, target_folder)
+            for source_folder, target_folder in zip(source_folders, target_folders):
+                self.check_changes(source_folder, target_folder)
             time.sleep(self.interval)  # Задержка между проверками (30 секунд)
 
     def stop(self):
