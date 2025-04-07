@@ -9,7 +9,7 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Мониторинг папок")
-        self.root.geometry("1000x600")
+        self.root.geometry("1000x700")
 
         self.source_folders = {}
         self.monitoring_thread = None
@@ -34,11 +34,14 @@ class App:
         self.remove_exclude_button = tk.Button(toolbar_frame, text="Удалить исключение", command=self.remove_exclude)
         self.remove_exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
 
-        self.tree = ttk.Treeview(self.root, columns=("Source", "Target", "Exclusions"), show="headings", height=15)
+        self.tree = ttk.Treeview(self.root, columns=("Source", "Target", "Exclusions"), show="headings", height=10)
         self.tree.heading("Source", text="Исходная папка")
         self.tree.heading("Target", text="Целевая папка")
         self.tree.heading("Exclusions", text="Исключения")
         self.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        self.log_text = tk.Text(self.root, height=10, state='disabled')
+        self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         bottom_frame = tk.Frame(self.root)
         bottom_frame.pack(fill=tk.X, pady=5)
@@ -103,7 +106,7 @@ class App:
             messagebox.showwarning("Предупреждение", "Пожалуйста, добавьте хотя бы одну задачу!")
             return
 
-        self.monitor = Monitor()
+        self.monitor = Monitor(log_callback=self.add_log)
 
         source_list = list(self.source_folders.keys())
         target_list = list(self.source_folders.values())
@@ -120,6 +123,15 @@ class App:
             self.monitor.stop()
             self.status_label.config(text="Статус: Приостановлен", fg="red")
             messagebox.showinfo("Информация", "Мониторинг остановлен")
+
+    def add_log(self, message):
+        with open("monitor_log.txt", "a") as log_file:
+            log_file.write(message + "\n")
+
+        self.log_text.config(state='normal')
+        self.log_text.insert(tk.END, message + "\n")
+        self.log_text.config(state='disabled')
+        self.log_text.yview(tk.END)
 
 if __name__ == "__main__":
     root = tk.Tk()
