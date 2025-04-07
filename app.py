@@ -4,19 +4,27 @@ from tkinter import filedialog, messagebox
 import threading
 from monitor import Monitor
 from exclude import ExcludeManager
+from database import FileDatabase
 
 class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Мониторинг папок")
         self.root.geometry("1000x700")
-
         self.source_folders = {}
         self.monitoring_thread = None
         self.monitor = None
         self.exclude_managers = {}
-
+        self.database = FileDatabase()
         self.create_widgets()
+        self.load_tasks()
+
+    def load_tasks(self):
+        tasks = self.database.get_tasks()
+        for source, target in tasks:
+            self.source_folders[source] = target
+            self.exclude_managers[source] = ExcludeManager()
+        self.update_tree()
 
     def create_widgets(self):
         toolbar_frame = tk.Frame(self.root)
@@ -61,6 +69,7 @@ class App:
         if source_folder and target_folder:
             self.source_folders[source_folder] = target_folder
             self.exclude_managers[source_folder] = ExcludeManager()
+            self.database.add_task(source_folder, target_folder)
             self.update_tree()
 
     def update_tree(self):
@@ -127,7 +136,6 @@ class App:
     def add_log(self, message):
         with open("monitor_log.txt", "a") as log_file:
             log_file.write(message + "\n")
-
         self.log_text.config(state='normal')
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.config(state='disabled')

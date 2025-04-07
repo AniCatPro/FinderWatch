@@ -1,19 +1,28 @@
 import shutil
 import hashlib
 import os
+from database import FileDatabase
 
 
 class FileHandler:
     def copy_file(self, src_path, target_folder):
-        filename = os.path.basename(src_path)
-        target_path = os.path.join(target_folder, filename)
+        file_hash = self.generate_hash(src_path)
 
-        if os.path.exists(target_path):
-            # Генерация хеша файла для версионности
-            file_hash = self.generate_hash(src_path)
-            target_path = os.path.join(target_folder, f"{file_hash}_{filename}")
+        # Создать новое соединение для каждого вызова
+        database = FileDatabase()
+        existing_hash = database.get_file_hash(src_path)
 
-        shutil.copy2(src_path, target_path)
+        if existing_hash != file_hash:
+            database.update_file_hash(src_path, file_hash)
+            filename = os.path.basename(src_path)
+            target_path = os.path.join(target_folder, filename)
+
+            if os.path.exists(target_path):
+                target_path = os.path.join(target_folder, f"{file_hash}_{filename}")
+
+            shutil.copy2(src_path, target_path)
+            return True
+        return False
 
     def generate_hash(self, file_path):
         hash_md5 = hashlib.md5()
