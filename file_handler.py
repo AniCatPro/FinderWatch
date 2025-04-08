@@ -7,27 +7,24 @@ from database import FileDatabase
 
 class FileHandler:
     def copy_file(self, src_path, target_folder):
-        # Получение текущей версии из БД
         database = FileDatabase()
         existing_versions = database.get_file_versions(src_path)
-
-        # Генерация следующей версии
         next_version = 1
         if existing_versions:
             version_list = [int(v) for v in existing_versions.split(',')]
             next_version = max(version_list) + 1
-
-        # Формирование нового имени файла
+        file_mod_time = os.path.getmtime(src_path)
+        date_str = datetime.fromtimestamp(file_mod_time).strftime("%d.%m.%Y")
+        time_str = datetime.fromtimestamp(file_mod_time).strftime("%H.%M")
+        version_str = f"v{next_version}"
         filename = os.path.basename(src_path)
         name, ext = os.path.splitext(filename)
-        new_name = f"v{next_version}_{name}{ext}"
+        new_name = f"{time_str}_{date_str}_{version_str}_{name}{ext}"
 
         target_path = os.path.join(target_folder, new_name)
 
-        # Копируем файл, если он не существует или необходимо обновление
         if not os.path.exists(target_path):
-            # Обновление версий в БД
-            new_versions = existing_versions + f",{next_version}" if existing_versions else str(next_version)
+            new_versions = f"{existing_versions},{next_version}" if existing_versions else str(next_version)
             database.update_file_versions(src_path, new_versions)
 
             shutil.copy2(src_path, target_path)
