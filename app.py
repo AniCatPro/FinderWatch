@@ -13,9 +13,11 @@ class App:
         self.root.geometry("1000x700")
         self.source_folders = {}
         self.monitoring_thread = None
-        self.monitor = None
+        self.monitor = Monitor(log_callback=self.add_log)
         self.exclude_managers = {}
         self.database = FileDatabase()
+        self.interval = self.monitor.interval
+        self.counter = self.interval
         self.create_widgets()
         self.load_tasks()
         self.initialize_automod()
@@ -69,6 +71,9 @@ class App:
 
         self.status_label = tk.Label(bottom_frame, text="Статус: Приостановлен", fg="red")
         self.status_label.pack(side=tk.LEFT, padx=20)
+
+        self.counter_label = tk.Label(bottom_frame, text=f"Следующее обновление через: {self.counter}с")
+        self.counter_label.pack(side=tk.RIGHT, padx=20)
 
     def add_task(self):
         source_folder = filedialog.askdirectory(title="Выберите исходную папку")
@@ -190,12 +195,21 @@ class App:
         source_list = list(self.source_folders.keys())
         target_list = list(self.source_folders.values())
         threading_exclude_managers = [self.exclude_managers[src] for src in source_list]
-        self.monitoring_thread = threading.Thread(target=self.monitor.start,
-                                                  args=(source_list, target_list, threading_exclude_managers),
-                                                  daemon=True)
+        self.monitoring_thread = threading.Thread(target=self.monitor.start, args=(source_list, target_list, threading_exclude_managers), daemon=True)
         self.monitoring_thread.start()
         self.status_label.config(text="Статус: Запущен", fg="green")
+        self.update_counter()
         messagebox.showinfo("Информация", "Мониторинг начался")
+
+    def update_counter(self):
+        if self.monitoring_thread and self.monitoring_thread.is_alive():
+            if self.counter > 0:
+                self.counter -= 1
+            else:
+                self.counter = self.interval
+
+            self.counter_label.config(text=f"Следующее обновление через: {self.counter}с")
+            self.root.after(1000, self.update_counter)
 
 if __name__ == "__main__":
     root = tk.Tk()
