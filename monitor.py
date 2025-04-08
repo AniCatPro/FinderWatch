@@ -23,8 +23,7 @@ class Monitor:
         for root, dirs, files in os.walk(source_folder):
             for file in files:
                 file_path = os.path.join(root, file)
-                if file_path not in exclude_manager.get_excluded_files():
-                    if self.file_handler.copy_file(file_path, target_folder):
-                        message = f"Файл {file_path} скопирован в {target_folder}"
-                        if self.log_callback:
-                            self.log_callback(message)
+                if self.file_handler.copy_file(file_path, target_folder, exclude_manager):
+                    message = f"Файл {file_path} скопирован в {target_folder}"
+                    if self.log_callback:
+                        self.log_callback(message)

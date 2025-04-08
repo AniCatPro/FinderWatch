@@ -5,7 +5,9 @@ import os
 from database import FileDatabase
 
 class FileHandler:
-    def copy_file(self, src_path, target_folder):
+    def copy_file(self, src_path, target_folder, exclude_manager):
+        if os.path.basename(src_path) in exclude_manager.get_excluded_files():
+            return False
         database = FileDatabase()
         current_hash = self.generate_hash(src_path)
         for file in os.listdir(target_folder):

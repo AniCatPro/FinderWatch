@@ -109,6 +109,7 @@ class App:
     def update_tree(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
+
         for source, target in self.source_folders.items():
             exclusions = ', '.join(self.exclude_managers[source].get_excluded_files())
             self.tree.insert("", tk.END, values=(source, target, exclusions))

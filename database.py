@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 class FileDatabase:
     def __init__(self, db_name="file_monitor.db"):
@@ -98,3 +99,11 @@ class FileDatabase:
                 INSERT INTO files (path, hash, versions) VALUES (?, ?, ?)
                 ON CONFLICT(path) DO UPDATE SET versions=excluded.versions
             """, (path, self.get_file_hash(path), versions))
+
+    def add_exclude(self, file_path):
+        filename = os.path.basename(file_path)
+        with self.connection:
+            self.connection.execute("""
+                INSERT INTO files (path, hash, versions) VALUES (?, ?, ?)
+                ON CONFLICT(path) DO UPDATE SET hash=excluded.hash, versions=excluded.versions
+            """, (filename, 'EXCLUDE', ''))
