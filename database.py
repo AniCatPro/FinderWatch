@@ -115,3 +115,16 @@ class FileDatabase:
             self.connection.execute("""
                 UPDATE tasks SET exclusions = ? WHERE source = ?
             """, (exclusions_str, source))
+
+    def get_exclusions(self, source):
+        cur = self.connection.cursor()
+        cur.execute("SELECT exclusions FROM tasks WHERE source = ?", (source,))
+        row = cur.fetchone()
+        return row[0].split(',') if row and row[0] else []
+
+    def set_exclusions(self, source, exclusions):
+        exclusions_str = ','.join(exclusions)
+        with self.connection:
+            self.connection.execute("""
+                UPDATE tasks SET exclusions = ? WHERE source = ?
+            """, (exclusions_str, source))

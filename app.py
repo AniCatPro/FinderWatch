@@ -7,6 +7,7 @@ from monitor import Monitor
 from exclude import ExcludeManager
 from database import FileDatabase
 from settings import SettingsWindow
+from exclude_manager import ExcludeWindow
 
 class App:
     def __init__(self, root):
@@ -48,11 +49,14 @@ class App:
         self.remove_task_button = tk.Button(toolbar_frame, text="Удалить", command=self.remove_task)
         self.remove_task_button.pack(side=tk.LEFT, padx=2, pady=2)
 
-        self.add_exclude_button = tk.Button(toolbar_frame, text="Добавить исключение", command=self.add_exclude)
-        self.add_exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
+        self.exclude_button = tk.Button(toolbar_frame, text="Исключения", command=self.open_exclude_window)
+        self.exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
 
-        self.remove_exclude_button = tk.Button(toolbar_frame, text="Удалить исключение", command=self.remove_exclude)
-        self.remove_exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
+        #self.add_exclude_button = tk.Button(toolbar_frame, text="Добавить исключение", command=self.add_exclude)
+        #self.add_exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
+
+        #self.remove_exclude_button = tk.Button(toolbar_frame, text="Удалить исключение", command=self.remove_exclude)
+        #self.remove_exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
 
         self.tree = ttk.Treeview(self.root, columns=("Source", "Target", "Exclusions"), show="headings", height=10)
         self.tree.heading("Source", text="Исходная папка")
@@ -115,9 +119,11 @@ class App:
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        for source, target in self.source_folders.items():
-            exclusions = ', '.join(self.exclude_managers[source].get_excluded_files())
-            self.tree.insert("", tk.END, values=(source, target, exclusions))
+        tasks = self.database.get_tasks()
+        for source, target, exclusions in tasks:
+            exclusion_list = exclusions.split(',') if exclusions else []
+            exclusion_names = ', '.join(exclusion_list)
+            self.tree.insert("", tk.END, values=(source, target, exclusion_names))
 
     def remove_task(self):
         selected_item = self.tree.selection()
@@ -228,6 +234,13 @@ class App:
 
     def open_settings(self):
         SettingsWindow(self.root, self.database)
+
+    def open_exclude_window(self):
+        selected_item = self.tree.selection()
+        if selected_item:
+            values = self.tree.item(selected_item, "values")
+            source_folder = values[0]
+            ExcludeWindow(self.root, source_folder, self.database, self)
 
 if __name__ == "__main__":
     root = tk.Tk()
