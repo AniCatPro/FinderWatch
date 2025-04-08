@@ -8,6 +8,8 @@ from exclude import ExcludeManager
 from database import FileDatabase
 from settings import SettingsWindow
 from exclude_manager import ExcludeWindow
+import getpass
+from datetime import datetime
 
 class App:
     def __init__(self, root):
@@ -182,10 +184,13 @@ class App:
             messagebox.showinfo("Информация", "Мониторинг остановлен")
 
     def add_log(self, message):
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        user = getpass.getuser()
+        formatted_message = f"[{current_time}] [User: {user}] {message}"
         with open("monitor_log.txt", "a") as log_file:
-            log_file.write(message + "\n")
+            log_file.write(formatted_message + "\n")
         self.log_text.config(state='normal')
-        self.log_text.insert(tk.END, message + "\n")
+        self.log_text.insert(tk.END, formatted_message + "\n")
         self.log_text.config(state='disabled')
         self.log_text.yview(tk.END)
 
