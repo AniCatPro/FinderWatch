@@ -75,11 +75,11 @@ class FileDatabase:
         cur = self.connection.cursor()
         cur.execute("SELECT value FROM settings WHERE key = 'automod'")
         row = cur.fetchone()
-        return row[0] == 'True' if row else False
+        return row and row[0] == 'True'
 
     def set_automod_state(self, state):
         with self.connection:
             self.connection.execute("""
                 INSERT INTO settings (key, value) VALUES ('automod', ?)
                 ON CONFLICT(key) DO UPDATE SET value=excluded.value
-            """, (str(state),))
+            """, ('True' if state else 'False',))

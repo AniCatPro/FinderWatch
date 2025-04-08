@@ -18,6 +18,7 @@ class App:
         self.database = FileDatabase()
         self.create_widgets()
         self.load_tasks()
+        self.initialize_automod()
 
     def load_tasks(self):
         tasks = self.database.get_tasks()
@@ -162,6 +163,14 @@ class App:
         self.log_text.config(state='disabled')
         self.log_text.yview(tk.END)
 
+    def initialize_automod(self):
+        current_state = self.database.get_automod_state()
+        state_text = "Вкл" if current_state else "Выкл"
+        self.automod_button.config(text=f"Автомод: {state_text}")
+
+        if current_state:
+            self.start_monitoring()
+
     def toggle_automod(self):
         current_state = self.database.get_automod_state()
         new_state = not current_state
@@ -169,22 +178,24 @@ class App:
         state_text = "Вкл" if new_state else "Выкл"
         self.automod_button.config(text=f"Автомод: {state_text}")
 
+        if new_state:
+            self.start_monitoring()
+
     def start_monitoring(self):
         if not self.source_folders:
             messagebox.showwarning("Предупреждение", "Пожалуйста, добавьте хотя бы одну задачу!")
             return
 
-        if self.database.get_automod_state():
-            self.monitor = Monitor(log_callback=self.add_log)
-            source_list = list(self.source_folders.keys())
-            target_list = list(self.source_folders.values())
-            threading_exclude_managers = [self.exclude_managers[src] for src in source_list]
-            self.monitoring_thread = threading.Thread(target=self.monitor.start,
-                                                      args=(source_list, target_list, threading_exclude_managers),
-                                                      daemon=True)
-            self.monitoring_thread.start()
-            self.status_label.config(text="Статус: Запущен", fg="green")
-            messagebox.showinfo("Информация", "Мониторинг начался")
+        self.monitor = Monitor(log_callback=self.add_log)
+        source_list = list(self.source_folders.keys())
+        target_list = list(self.source_folders.values())
+        threading_exclude_managers = [self.exclude_managers[src] for src in source_list]
+        self.monitoring_thread = threading.Thread(target=self.monitor.start,
+                                                  args=(source_list, target_list, threading_exclude_managers),
+                                                  daemon=True)
+        self.monitoring_thread.start()
+        self.status_label.config(text="Статус: Запущен", fg="green")
+        messagebox.showinfo("Информация", "Мониторинг начался")
 
 if __name__ == "__main__":
     root = tk.Tk()
