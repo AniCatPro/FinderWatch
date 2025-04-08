@@ -1,6 +1,7 @@
 import sqlite3
 import os
 
+
 class FileDatabase:
     def __init__(self, db_name="file_monitor.db"):
         self.connection = sqlite3.connect(db_name)
@@ -9,22 +10,24 @@ class FileDatabase:
     def create_tables(self):
         with self.connection:
             try:
-                self.connection.execute("ALTER TABLE files ADD COLUMN versions TEXT")
+                self.connection.execute("ALTER TABLE tasks ADD COLUMN exclusions TEXT")
             except sqlite3.OperationalError:
-                pass
+                pass  # Колонка уже существует
 
             self.connection.execute("""
                 CREATE TABLE IF NOT EXISTS files (
                     id INTEGER PRIMARY KEY,
                     path TEXT UNIQUE NOT NULL,
-                    hash TEXT NOT NULL
+                    hash TEXT NOT NULL,
+                    versions TEXT
                 )
             """)
             self.connection.execute("""
                 CREATE TABLE IF NOT EXISTS tasks (
                     id INTEGER PRIMARY KEY,
                     source TEXT UNIQUE NOT NULL,
-                    target TEXT NOT NULL
+                    target TEXT NOT NULL,
+                    exclusions TEXT
                 )
             """)
             self.connection.execute("""
@@ -57,7 +60,7 @@ class FileDatabase:
 
     def get_tasks(self):
         cur = self.connection.cursor()
-        cur.execute("SELECT source, target FROM tasks")
+        cur.execute("SELECT source, target, exclusions FROM tasks")
         return cur.fetchall()
 
     def get_automod_state(self):
@@ -99,10 +102,16 @@ class FileDatabase:
                 ON CONFLICT(path) DO UPDATE SET versions=excluded.versions
             """, (path, self.get_file_hash(path), versions))
 
-    def add_exclude(self, file_path):
-        filename = os.path.basename(file_path)
+    def add_exclude(self, source, filename):
+        cur = self.connection.cursor()
+        cur.execute("SELECT exclusions FROM tasks WHERE source = ?", (source,))
+        row = cur.fetchone()
+        exclusions = row[0].split(',') if row and row[0] else []
+        if filename not in exclusions:
+            exclusions.append(filename)
+        exclusions_str = ','.join(exclusions)
+
         with self.connection:
             self.connection.execute("""
-                INSERT INTO files (path, hash, versions) VALUES (?, ?, ?)
-                ON CONFLICT(path) DO UPDATE SET hash=excluded.hash, versions=excluded.versions
-            """, (filename, 'EXCLUDE', ''))
+                UPDATE tasks SET exclusions = ? WHERE source = ?
+            """, (exclusions_str, source))

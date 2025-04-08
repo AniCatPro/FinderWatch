@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog, messagebox
@@ -25,9 +26,13 @@ class App:
 
     def load_tasks(self):
         tasks = self.database.get_tasks()
-        for source, target in tasks:
+        for source, target, exclusion_str in tasks:
             self.source_folders[source] = target
-            self.exclude_managers[source] = ExcludeManager()
+            exclusions = exclusion_str.split(',') if exclusion_str else []
+            manager = ExcludeManager()
+            for ex in exclusions:
+                manager.add(ex)
+            self.exclude_managers[source] = manager
         self.update_tree()
 
     def create_widgets(self):
@@ -130,7 +135,9 @@ class App:
             source_folder = values[0]
             exclude_item = filedialog.askopenfilename(title="Выберите файл для исключения")
             if exclude_item:
-                self.exclude_managers[source_folder].add(exclude_item)
+                filename = os.path.basename(exclude_item)
+                self.exclude_managers[source_folder].add(filename)
+                self.database.add_exclude(source_folder, filename)
                 self.update_tree()
 
     def remove_exclude(self):
