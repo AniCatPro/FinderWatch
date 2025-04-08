@@ -5,6 +5,7 @@ import threading
 from monitor import Monitor
 from exclude import ExcludeManager
 from database import FileDatabase
+from settings import SettingsWindow
 
 class App:
     def __init__(self, root):
@@ -74,6 +75,9 @@ class App:
 
         self.counter_label = tk.Label(bottom_frame, text=f"Следующее обновление через: {self.counter}с")
         self.counter_label.pack(side=tk.RIGHT, padx=20)
+
+        self.settings_button = tk.Button(toolbar_frame, text="Настройки", command=self.open_settings)
+        self.settings_button.pack(side=tk.LEFT, padx=2, pady=2)
 
     def add_task(self):
         source_folder = filedialog.askdirectory(title="Выберите исходную папку")
@@ -210,6 +214,9 @@ class App:
 
             self.counter_label.config(text=f"Следующее обновление через: {self.counter}с")
             self.root.after(1000, self.update_counter)
+
+    def open_settings(self):
+        SettingsWindow(self.root, self.database)
 
 if __name__ == "__main__":
     root = tk.Tk()
