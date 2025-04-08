@@ -10,8 +10,12 @@ class FileHandler:
             return False
         database = FileDatabase()
         current_hash = self.generate_hash(src_path)
-        for file in os.listdir(target_folder):
-            target_file_path = os.path.join(target_folder, file)
+        filename = os.path.basename(src_path)
+        name, ext = os.path.splitext(filename)
+        subfolder_path = os.path.join(target_folder, name)
+        os.makedirs(subfolder_path, exist_ok=True)
+        for file in os.listdir(subfolder_path):
+            target_file_path = os.path.join(subfolder_path, file)
             if os.path.isfile(target_file_path):
                 target_hash = self.generate_hash(target_file_path)
                 if current_hash == target_hash:
@@ -26,13 +30,12 @@ class FileHandler:
         file_mod_time = os.path.getmtime(src_path)
         date_str = datetime.fromtimestamp(file_mod_time).strftime("%d.%m.%Y") if add_date else ""
         time_str = datetime.fromtimestamp(file_mod_time).strftime("%H.%M") if add_time else ""
-        filename = os.path.basename(src_path)
-        name, ext = os.path.splitext(filename)
         new_name = f"v{next_version}_{name}{f'_{time_str}' if add_time else ''}{f'_{date_str}' if add_date else ''}{ext}"
-        target_path = os.path.join(target_folder, new_name)
+        target_path = os.path.join(subfolder_path, new_name)
         database.update_file_hash(src_path, current_hash)
         new_versions = f"{existing_versions},{next_version}" if existing_versions else str(next_version)
         database.update_file_versions(src_path, new_versions)
+
         shutil.copy2(src_path, target_path)
         return True
 
