@@ -9,7 +9,7 @@ from database import FileDatabase
 class App:
     def __init__(self, root):
         self.root = root
-        self.root.title("Мониторинг папок")
+        self.root.title("Мониторинг папок (by anicatpro)")
         self.root.geometry("1000x700")
         self.source_folders = {}
         self.monitoring_thread = None
