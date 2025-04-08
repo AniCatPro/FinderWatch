@@ -87,6 +87,9 @@ class App:
             self.exclude_managers[source_folder] = ExcludeManager()
             self.database.add_task(source_folder, target_folder)
             self.update_tree()
+            if self.monitoring_thread and self.monitoring_thread.is_alive():
+                messagebox.showinfo("Перезапуск службы",
+                                    "Вы добавили новую задачу. Пожалуйста, перезапустите мониторинг.")
 
     def edit_task(self):
         selected_item = self.tree.selection()
