@@ -46,3 +46,40 @@ class FileDatabase:
         cur = self.connection.cursor()
         cur.execute("SELECT source, target FROM tasks")
         return cur.fetchall()
+
+    def create_tables(self):
+        with self.connection:
+            self.connection.execute("""
+                CREATE TABLE IF NOT EXISTS files (
+                    id INTEGER PRIMARY KEY,
+                    path TEXT UNIQUE NOT NULL,
+                    hash TEXT NOT NULL
+                )
+            """)
+            self.connection.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id INTEGER PRIMARY KEY,
+                    source TEXT UNIQUE NOT NULL,
+                    target TEXT NOT NULL
+                )
+            """)
+            self.connection.execute("""
+                CREATE TABLE IF NOT EXISTS settings (
+                    id INTEGER PRIMARY KEY,
+                    key TEXT UNIQUE NOT NULL,
+                    value TEXT NOT NULL
+                )
+            """)
+
+    def get_automod_state(self):
+        cur = self.connection.cursor()
+        cur.execute("SELECT value FROM settings WHERE key = 'automod'")
+        row = cur.fetchone()
+        return row[0] == 'True' if row else False
+
+    def set_automod_state(self, state):
+        with self.connection:
+            self.connection.execute("""
+                INSERT INTO settings (key, value) VALUES ('automod', ?)
+                ON CONFLICT(key) DO UPDATE SET value=excluded.value
+            """, (str(state),))
