@@ -8,11 +8,10 @@ class FileDatabase:
 
     def create_tables(self):
         with self.connection:
-            # Попытка добавить колонку versions, если ее нет
             try:
                 self.connection.execute("ALTER TABLE files ADD COLUMN versions TEXT")
             except sqlite3.OperationalError:
-                pass  # Колонка уже существует
+                pass
 
             self.connection.execute("""
                 CREATE TABLE IF NOT EXISTS files (
