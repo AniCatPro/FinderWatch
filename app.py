@@ -93,10 +93,10 @@ class App:
         self.settings_button = tk.Button(toolbar_frame, text="Настройки", command=self.open_settings)
         self.settings_button.pack(side=tk.LEFT, padx=2, pady=2)
 
-        image = Image.open("res/icon.png")
-        image = image.resize((16, 16), Image.LANCZOS)
-        self.icon = ImageTk.PhotoImage(image)
-        version_label = tk.Label(toolbar_frame, text=f"Версия: {self.version}", fg="grey", image=self.icon,
+        #image = Image.open("res/icon.png")
+        #image = image.resize((16, 16), Image.LANCZOS)
+        #self.icon = ImageTk.PhotoImage(image)
+        version_label = tk.Label(toolbar_frame, text=f"Версия: {self.version}", fg="grey", #image=self.icon,
                                  compound=tk.LEFT)
         version_label.pack(side=tk.RIGHT, padx=10, pady=2)
 
