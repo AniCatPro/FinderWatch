@@ -4,10 +4,17 @@ import hashlib
 import os
 from database import FileDatabase
 
-
 class FileHandler:
     def copy_file(self, src_path, target_folder):
         database = FileDatabase()
+        current_hash = self.generate_hash(src_path)
+        for file in os.listdir(target_folder):
+            target_file_path = os.path.join(target_folder, file)
+            if os.path.isfile(target_file_path):
+                target_hash = self.generate_hash(target_file_path)
+                if current_hash == target_hash:
+                    return False
+
         existing_versions = database.get_file_versions(src_path)
         next_version = 1
         if existing_versions:
@@ -20,17 +27,12 @@ class FileHandler:
         filename = os.path.basename(src_path)
         name, ext = os.path.splitext(filename)
         new_name = f"{time_str}_{date_str}_{version_str}_{name}{ext}"
-
         target_path = os.path.join(target_folder, new_name)
-
-        if not os.path.exists(target_path):
-            new_versions = f"{existing_versions},{next_version}" if existing_versions else str(next_version)
-            database.update_file_versions(src_path, new_versions)
-
-            shutil.copy2(src_path, target_path)
-            return True
-
-        return False
+        database.update_file_hash(src_path, current_hash)
+        new_versions = f"{existing_versions},{next_version}" if existing_versions else str(next_version)
+        database.update_file_versions(src_path, new_versions)
+        shutil.copy2(src_path, target_path)
+        return True
 
     def generate_hash(self, file_path):
         hash_md5 = hashlib.md5()
