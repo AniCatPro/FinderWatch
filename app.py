@@ -1,7 +1,6 @@
 import os
 import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox
 import threading
 from monitor import Monitor
 from exclude import ExcludeManager
@@ -10,6 +9,7 @@ from settings import SettingsWindow
 from exclude_manager import ExcludeWindow
 import getpass
 from datetime import datetime
+from dotenv import load_dotenv
 
 class App:
     def __init__(self, root):
@@ -23,6 +23,8 @@ class App:
         self.database = FileDatabase()
         self.interval = self.monitor.interval
         self.counter = self.interval
+        load_dotenv()
+        self.version = os.getenv("APP_VERSION")
         self.create_widgets()
         self.load_tasks()
         self.initialize_automod()
@@ -89,6 +91,9 @@ class App:
 
         self.settings_button = tk.Button(toolbar_frame, text="Настройки", command=self.open_settings)
         self.settings_button.pack(side=tk.LEFT, padx=2, pady=2)
+
+        version_label = tk.Label(toolbar_frame, text=f"Версия: {self.version}", fg="grey")
+        version_label.pack(side=tk.RIGHT, padx=10, pady=2)
 
     def add_task(self):
         source_folder = filedialog.askdirectory(title="Выберите исходную папку")
@@ -246,6 +251,10 @@ class App:
             values = self.tree.item(selected_item, "values")
             source_folder = values[0]
             ExcludeWindow(self.root, source_folder, self.database, self)
+
+    def open_url(self, url):
+        import webbrowser
+        webbrowser.open_new(url)
 
 if __name__ == "__main__":
     root = tk.Tk()
