@@ -7,31 +7,29 @@ from database import FileDatabase
 
 class FileHandler:
     def copy_file(self, src_path, target_folder):
-        file_hash = self.generate_hash(src_path)
-
-        # Создаём новое соединение с БД
+        # Получение текущей версии из БД
         database = FileDatabase()
-        existing_hash = database.get_file_hash(src_path)
+        existing_versions = database.get_file_versions(src_path)
 
-        # Получение текущих настроек
-        date_format = database.get_setting("date_format") or "%d.%m.%Y"
-        time_format = database.get_setting("time_format") or "%H.%M"
-        add_version = database.get_setting("version") == 'True'
-
-        # Формирование дополнительных частей имени
-        date_str = datetime.now().strftime(date_format)
-        time_str = datetime.now().strftime(time_format)
-        version_str = f"_{file_hash}" if add_version else ""
+        # Генерация следующей версии
+        next_version = 1
+        if existing_versions:
+            version_list = [int(v) for v in existing_versions.split(',')]
+            next_version = max(version_list) + 1
 
         # Формирование нового имени файла
         filename = os.path.basename(src_path)
         name, ext = os.path.splitext(filename)
-        new_name = f"{date_str}_{time_str}{version_str}_{name}{ext}"
+        new_name = f"v{next_version}_{name}{ext}"
 
         target_path = os.path.join(target_folder, new_name)
 
-        if (existing_hash != file_hash) or (not os.path.exists(target_path)):
-            database.update_file_hash(src_path, file_hash)
+        # Копируем файл, если он не существует или необходимо обновление
+        if not os.path.exists(target_path):
+            # Обновление версий в БД
+            new_versions = existing_versions + f",{next_version}" if existing_versions else str(next_version)
+            database.update_file_versions(src_path, new_versions)
+
             shutil.copy2(src_path, target_path)
             return True
 
