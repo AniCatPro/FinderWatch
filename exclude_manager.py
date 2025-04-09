@@ -35,3 +35,16 @@ class ExcludeWindow:
         self.app.update_tree()
         messagebox.showinfo("Информация", "Исключения обновлены")
         self.window.destroy()
+
+    def remove_task(self):
+        selected_item = self.tree.selection()
+        if selected_item:
+            values = self.tree.item(selected_item, "values")
+            source_folder = values[0]
+            if source_folder in self.source_folders:
+                del self.source_folders[source_folder]
+                del self.exclude_managers[source_folder]
+                self.database.remove_task(source_folder)
+                self.update_tree()
+            else:
+                messagebox.showerror("Ошибка", "Элемент не найден.")

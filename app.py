@@ -142,9 +142,14 @@ class App:
         if selected_item:
             values = self.tree.item(selected_item, "values")
             source_folder = values[0]
-            del self.source_folders[source_folder]
-            del self.exclude_managers[source_folder]
-            self.update_tree()
+            if source_folder in self.source_folders:
+                print(f"Удаление задачи: {source_folder}")
+                del self.source_folders[source_folder]
+                del self.exclude_managers[source_folder]
+                self.database.remove_task(source_folder)
+                self.update_tree()
+            else:
+                messagebox.showerror("Ошибка", "Элемент не найден.")
 
     def add_exclude(self):
         selected_item = self.tree.selection()

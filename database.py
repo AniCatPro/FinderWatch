@@ -128,3 +128,7 @@ class FileDatabase:
             self.connection.execute("""
                 UPDATE tasks SET exclusions = ? WHERE source = ?
             """, (exclusions_str, source))
+
+    def remove_task(self, source):
+        with self.connection:
+            self.connection.execute("DELETE FROM tasks WHERE source = ?", (source,))
