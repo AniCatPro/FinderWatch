@@ -199,15 +199,18 @@ class App:
             messagebox.showinfo("Информация", "Мониторинг остановлен")
 
     def add_log(self, message):
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        user = getpass.getuser()
-        formatted_message = f"[{current_time}] [User: {user}] {message}"
-        with open("monitor_log.txt", "a") as log_file:
-            log_file.write(formatted_message + "\n")
-        self.log_text.config(state='normal')
-        self.log_text.insert(tk.END, formatted_message + "\n")
-        self.log_text.config(state='disabled')
-        self.log_text.yview(tk.END)
+        try:
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            user = getpass.getuser()
+            formatted_message = f"[{current_time}] [User: {user}] {message}"
+            with open("monitor_log.txt", "a") as log_file:
+                log_file.write(formatted_message + "\n")
+            self.log_text.config(state='normal')
+            self.log_text.insert(tk.END, formatted_message + "\n")
+            self.log_text.config(state='disabled')
+            self.log_text.yview(tk.END)
+        except Exception as e:
+            print(f"Ошибка при добавлении логов: {e}")
 
     def initialize_automod(self):
         current_state = self.database.get_automod_state()
