@@ -104,11 +104,8 @@ class App:
         source_folder = filedialog.askdirectory(title="Выберите исходную папку")
         target_folder = filedialog.askdirectory(title="Выберите целевую папку")
         if source_folder and target_folder:
-            if target_folder.startswith(source_folder):
-                if target_folder not in self.exclude_managers:
-                    self.exclude_managers[source_folder] = ExcludeManager()
-                self.exclude_managers[source_folder].add(target_folder)
             self.source_folders[source_folder] = target_folder
+            self.exclude_managers[source_folder] = ExcludeManager()
             self.database.add_task(source_folder, target_folder)
             self.update_tree()
             if self.monitoring_thread and self.monitoring_thread.is_alive():
