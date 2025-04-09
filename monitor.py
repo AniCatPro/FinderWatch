@@ -21,10 +21,14 @@ class Monitor:
 
     def check_changes(self, source_folder, target_folder, exclude_manager):
         for root, dirs, files in os.walk(source_folder):
+            dirs[:] = [d for d in dirs if d not in exclude_manager.get_excluded_files()]
             for file in files:
                 file_path = os.path.join(root, file)
                 if file in exclude_manager.get_excluded_files():
                     continue
+                if file_path.startswith(target_folder):
+                    continue
+
                 if self.file_handler.copy_file(file_path, target_folder, exclude_manager):
                     message = f"Файл {file_path} скопирован в {target_folder}"
                     if self.log_callback:

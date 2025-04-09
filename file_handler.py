@@ -6,6 +6,8 @@ from database import FileDatabase
 
 class FileHandler:
     def copy_file(self, src_path, target_folder, exclude_manager):
+        if src_path.startswith(target_folder):
+            return False
         if os.path.basename(src_path) in exclude_manager.get_excluded_files():
             return False
         database = FileDatabase()
