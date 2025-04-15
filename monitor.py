@@ -20,12 +20,14 @@ class Monitor:
         self.running = False
 
     def check_changes(self, source_folder, target_folder, exclude_manager):
+        norm = lambda path: os.path.normpath(path).replace('\\', '/')
         for root, dirs, files in os.walk(source_folder):
             for file in files:
-                file_path = os.path.join(root, file)
-                if os.path.basename(file_path) in exclude_manager.get_excluded_files():
-                    continue
-                if self.file_handler.copy_file(source_folder, file_path, target_folder, exclude_manager):
-                    message = f"Файл {file_path} скопирован в {target_folder}"
+                src_file_path = norm(os.path.join(root, file))
+                if not exclude_manager.is_excluded(src_file_path):
                     if self.log_callback:
-                        self.log_callback(message)
+                        self.log_callback(f"Обработка файла: {src_file_path}")
+                    if self.file_handler.copy_file(source_folder, src_file_path, target_folder, exclude_manager):
+                        if self.log_callback:
+                            message = f"Файл {src_file_path} скопирован в {target_folder}"
+                            self.log_callback(message)

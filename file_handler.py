@@ -7,8 +7,7 @@ from database import FileDatabase
 
 class FileHandler:
     def copy_file(self, src_root, src_path, target_folder, exclude_manager):
-        if os.path.basename(src_path) in exclude_manager.get_excluded_files():
-            return False
+        full_src_path = os.path.abspath(os.path.join(src_root, src_path))
         database = FileDatabase()
         current_hash = self.generate_hash(src_path)
         filename = os.path.basename(src_path)

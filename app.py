@@ -34,11 +34,12 @@ class App:
         tasks = self.database.get_tasks()
         for source, target, exclusion_str in tasks:
             self.source_folders[source] = target
-            exclusions = exclusion_str.split(',') if exclusion_str else []
-            manager = ExcludeManager()
-            for ex in exclusions:
-                manager.add(ex)
-            self.exclude_managers[source] = manager
+            exclude_manager = ExcludeManager(source)
+            if exclusion_str:
+                exclusions = exclusion_str.split(',')
+                for exclusion in exclusions:
+                    exclude_manager.add(exclusion)
+            self.exclude_managers[source] = exclude_manager
         self.update_tree()
 
     def create_widgets(self):
@@ -56,12 +57,6 @@ class App:
 
         self.exclude_button = tk.Button(toolbar_frame, text="Исключения", command=self.open_exclude_window)
         self.exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
-
-        #self.add_exclude_button = tk.Button(toolbar_frame, text="Добавить исключение", command=self.add_exclude)
-        #self.add_exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
-
-        #self.remove_exclude_button = tk.Button(toolbar_frame, text="Удалить исключение", command=self.remove_exclude)
-        #self.remove_exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
 
         self.tree = ttk.Treeview(self.root, columns=("Source", "Target", "Exclusions"), show="headings", height=10)
         self.tree.heading("Source", text="Исходная папка")
@@ -93,7 +88,7 @@ class App:
         self.settings_button = tk.Button(toolbar_frame, text="Настройки", command=self.open_settings)
         self.settings_button.pack(side=tk.LEFT, padx=2, pady=2)
 
-        #image = Image.open("res/icon.png")
+        # image = Image.open("res/icon.png")
         #image = image.resize((16, 16), Image.LANCZOS)
         #self.icon = ImageTk.PhotoImage(image)
         version_label = tk.Label(toolbar_frame, text=f"Версия: {self.version}", fg="grey", #image=self.icon,
@@ -105,10 +100,10 @@ class App:
         target_folder = filedialog.askdirectory(title="Выберите целевую папку")
         if source_folder and target_folder:
             self.source_folders[source_folder] = target_folder
-            self.exclude_managers[source_folder] = ExcludeManager()
+            self.exclude_managers[source_folder] = ExcludeManager(source_folder)#
             self.database.add_task(source_folder, target_folder)
             self.update_tree()
-            if self.monitoring_thread and self.monitoring_thread.is_alive():
+            if self.monitoring_thread and self.monitoring_thread.is_alive():#TODO проверить работает ли
                 messagebox.showinfo("Перезапуск службы",
                                     "Вы добавили новую задачу. Пожалуйста, перезапустите мониторинг.")
 
@@ -123,7 +118,7 @@ class App:
                 del self.source_folders[source_folder]
                 del self.exclude_managers[source_folder]
                 self.source_folders[new_source_folder] = new_target_folder
-                self.exclude_managers[new_source_folder] = ExcludeManager()
+                self.exclude_managers[new_source_folder] = ExcludeManager(new_source_folder)
                 self.database.add_task(new_source_folder, new_target_folder)
                 self.update_tree()
 
@@ -132,7 +127,7 @@ class App:
             self.tree.delete(item)
 
         tasks = self.database.get_tasks()
-        for source, target, exclusions in tasks:
+        for source, target, exclusions in tasks:#TODO проверить работает ли
             exclusion_list = exclusions.split(',') if exclusions else []
             exclusion_names = ', '.join(exclusion_list)
             self.tree.insert("", tk.END, values=(source, target, exclusion_names))
@@ -151,29 +146,16 @@ class App:
             else:
                 messagebox.showerror("Ошибка", "Элемент не найден.")
 
-    def add_exclude(self):
-        selected_item = self.tree.selection()
-        if selected_item:
-            values = self.tree.item(selected_item, "values")
-            source_folder = values[0]
-            exclude_item = filedialog.askopenfilename(title="Выберите файл для исключения")
-            if exclude_item:
-                filename = os.path.basename(exclude_item)
-                self.exclude_managers[source_folder].add(filename)
-                self.database.add_exclude(source_folder, filename)
-                self.update_tree()
-
     def remove_exclude(self):
         selected_item = self.tree.selection()
         if selected_item:
             values = self.tree.item(selected_item, "values")
             source_folder = values[0]
-            excludes = list(self.exclude_managers[source_folder].get_excluded_files())
-            if excludes:
-                exclude_to_remove = filedialog.askopenfilename(title="Выберите файл для удаления из исключений", initialdir=excludes)
-                if exclude_to_remove in excludes:
-                    self.exclude_managers[source_folder].excluded_files.discard(exclude_to_remove)
-                    self.update_tree()
+            exclude_path = filedialog.askdirectory(title="Выберите исключение для удаления")
+            if exclude_path:
+                self.exclude_managers[source_folder].remove(exclude_path)
+                self.database.remove_exclude(source_folder, exclude_path)
+                self.update_tree()
 
     def start_monitoring(self):
         if not self.source_folders:

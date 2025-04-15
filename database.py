@@ -102,25 +102,21 @@ class FileDatabase:
                 ON CONFLICT(path) DO UPDATE SET versions=excluded.versions
             """, (path, self.get_file_hash(path), versions))
 
-    def add_exclude(self, source, filename):
-        cur = self.connection.cursor()
-        cur.execute("SELECT exclusions FROM tasks WHERE source = ?", (source,))
-        row = cur.fetchone()
-        exclusions = row[0].split(',') if row and row[0] else []
-        if filename not in exclusions:
-            exclusions.append(filename)
-        exclusions_str = ','.join(exclusions)
-
-        with self.connection:
-            self.connection.execute("""
-                UPDATE tasks SET exclusions = ? WHERE source = ?
-            """, (exclusions_str, source))
-
     def get_exclusions(self, source):
         cur = self.connection.cursor()
         cur.execute("SELECT exclusions FROM tasks WHERE source = ?", (source,))
         row = cur.fetchone()
         return row[0].split(',') if row and row[0] else []
+
+    def set_exclusions(self, source, exclusions):
+        if isinstance(exclusions, list):
+            exclusions_str = ','.join(exclusions)
+            with self.connection:
+                self.connection.execute("""
+                    UPDATE tasks SET exclusions = ? WHERE source = ?
+                """, (exclusions_str, source))
+        else:
+            raise ValueError("Exclusions must be a list of strings.")
 
     def set_exclusions(self, source, exclusions):
         exclusions_str = ','.join(exclusions)
