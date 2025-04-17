@@ -89,6 +89,25 @@ class FileDatabase:
                 ON CONFLICT(key) DO UPDATE SET value=excluded.value
             """, (key, value))
 
+    def get_monitoring_period_seconds(self):
+        time_str = self.get_setting("monitoring_period")
+        if time_str:
+            return self.convert_time_to_seconds(time_str)
+        return 30  # Default value
+
+    def convert_time_to_seconds(self, time_str):
+        if not time_str:
+            return 30
+        hours, minutes, seconds = map(int, time_str.split(':'))
+        return hours * 3600 + minutes * 60 + seconds
+
+    def convert_seconds_to_time(self, seconds):
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        seconds = seconds % 60
+        return "{:02d}:{:02d}:{:02d}".format(hours, minutes, seconds)
+
+
     def get_file_versions(self, path):
         cur = self.connection.cursor()
         cur.execute("SELECT versions FROM files WHERE path = ?", (path,))

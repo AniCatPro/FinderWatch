@@ -19,12 +19,11 @@ class App:
         self.root.geometry("1000x700")
         self.source_folders = {}
         self.monitoring_thread = None
-        self.monitor = Monitor(log_callback=self.add_log)
         self.exclude_managers = {}
         self.database = FileDatabase()
-        self.interval = self.monitor.interval
-        self.counter = self.interval
+        self.monitor = Monitor(self.database, log_callback=self.add_log)
         load_dotenv()
+
         self.version = os.getenv("APP_VERSION")
         self.create_widgets()
         self.load_tasks()
@@ -82,7 +81,7 @@ class App:
         self.status_label = tk.Label(bottom_frame, text="Статус: Приостановлен", fg="red")
         self.status_label.pack(side=tk.LEFT, padx=20)
 
-        self.counter_label = tk.Label(bottom_frame, text=f"Следующее обновление через: {self.counter}с")
+        self.counter_label = tk.Label(bottom_frame, text=f"Следующее обновление через: {self.monitor.interval}с")
         self.counter_label.pack(side=tk.RIGHT, padx=20)
 
         self.settings_button = tk.Button(toolbar_frame, text="Настройки", command=self.open_settings)
@@ -162,7 +161,7 @@ class App:
             messagebox.showwarning("Предупреждение", "Пожалуйста, добавьте хотя бы одну задачу!")
             return
 
-        self.monitor = Monitor(log_callback=self.add_log)
+        self.monitor = Monitor(self.database, log_callback=self.add_log)
 
         source_list = list(self.source_folders.keys())
         target_list = list(self.source_folders.values())
@@ -217,7 +216,7 @@ class App:
             messagebox.showwarning("Предупреждение", "Пожалуйста, добавьте хотя бы одну задачу!")
             return
 
-        self.monitor = Monitor(log_callback=self.add_log)
+        self.monitor = Monitor(self.database, log_callback=self.add_log)
         source_list = list(self.source_folders.keys())
         target_list = list(self.source_folders.values())
         threading_exclude_managers = [self.exclude_managers[src] for src in source_list]
@@ -229,16 +228,22 @@ class App:
 
     def update_counter(self):
         if self.monitoring_thread and self.monitoring_thread.is_alive():
-            if self.counter > 0:
-                self.counter -= 1
+            if self.monitor.interval > 0:
+                self.monitor.interval -= 1
             else:
-                self.counter = self.interval
+                new_interval = self.database.get_monitoring_period_seconds()
+                self.monitor.interval = int(new_interval)
 
-            self.counter_label.config(text=f"Следующее обновление через: {self.counter}с")
+
+            self.counter_label.config(text=f"Следующее обновление через: {self.monitor.interval}с")
             self.root.after(1000, self.update_counter)
 
     def open_settings(self):
-        SettingsWindow(self.root, self.database)
+        SettingsWindow(self.root, self.database, self.monitor, on_save_callback=self.on_settings_saved)
+
+    def on_settings_saved(self):
+        self.monitor.interval = self.database.get_monitoring_period_seconds()
+        self.counter_label.config(text=f"Следующее обновление через: {self.monitor.interval}с")
 
     def open_exclude_window(self):
         selected_item = self.tree.selection()

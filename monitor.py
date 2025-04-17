@@ -3,10 +3,11 @@ import os
 from file_handler import FileHandler
 
 class Monitor:
-    def __init__(self, log_callback=None):
+    def __init__(self, database, log_callback=None):
         self.file_handler = FileHandler()
         self.running = False
-        self.interval = 30  # Период в секундах для проверки
+        self.database = database
+        self.interval = self.database.get_monitoring_period_seconds()
         self.log_callback = log_callback
 
     def start(self, source_folders, target_folders, exclude_managers):
