@@ -96,10 +96,15 @@ class FileDatabase:
         return 30  # Default value
 
     def convert_time_to_seconds(self, time_str):
-        if not time_str:
+        # Защита: если невалидный формат — вернуть 30 секунд
+        try:
+            parts = time_str.split(':')
+            if len(parts) != 3 or not all(p.isdigit() and p != '' for p in parts):
+                return 30
+            hours, minutes, seconds = map(int, parts)
+            return hours * 3600 + minutes * 60 + seconds
+        except Exception:
             return 30
-        hours, minutes, seconds = map(int, time_str.split(':'))
-        return hours * 3600 + minutes * 60 + seconds
 
     def convert_seconds_to_time(self, seconds):
         hours = seconds // 3600

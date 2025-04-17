@@ -49,21 +49,26 @@ class SettingsWindow:
             self.monitoring_period_var.set(monitoring_period)
 
     def save_settings(self):
+        time_val = self.monitoring_period_var.get()
+        # Строгая проверка перед сохранением (иначе вернем "00:00:30")
+        import re
+        if not re.fullmatch(r"\d{2}:\d{2}:\d{2}", time_val):
+            messagebox.showwarning("Ошибка",
+                                   "Периодичность мониторинга должна быть в формате ЧЧ:ММ:СС (например 01:00:00)!")
+            return
         self.database.set_setting("add_date", str(self.add_date_var.get()))
         self.database.set_setting("add_time", str(self.add_time_var.get()))
-        self.database.set_setting("monitoring_period", self.monitoring_period_var.get())
+        self.database.set_setting("monitoring_period", time_val)
         messagebox.showinfo("Информация", "Настройки сохранены")
         if self.on_save_callback:
             self.on_save_callback()
         self.settings_window.destroy()
 
     def validate_time_format(self, action, new_value):
-        pattern = re.compile(r"^\d{2}:\d{2}:\d{2}$")
-        if action == '0':  # удаление символа
+        pattern = re.compile(r"^\d{0,2}(:\d{0,2}){0,2}$")
+        if action == '0':  # удаление — всегда разрешать
             return True
-        if action == '1':
-            if pattern.match(new_value) or new_value == '':
-                return True
-            else:
-                return False
-        return True
+        # проверяем только что вводится текст
+        if pattern.match(new_value):
+            return True
+        return False

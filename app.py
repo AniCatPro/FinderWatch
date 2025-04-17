@@ -2,29 +2,32 @@ import os
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
+import getpass
+from datetime import datetime
+from dotenv import load_dotenv
+from PIL import Image, ImageTk
+
 from monitor import Monitor
 from exclude import ExcludeManager
 from database import FileDatabase
 from settings import SettingsWindow
 from exclude_manager import ExcludeWindow
-import getpass
-from datetime import datetime
-from dotenv import load_dotenv
-from PIL import Image, ImageTk
 
 class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Мониторинг папок (by anicatpro)")
         self.root.geometry("1000x700")
+
         self.source_folders = {}
         self.monitoring_thread = None
         self.exclude_managers = {}
         self.database = FileDatabase()
         self.monitor = Monitor(self.database, log_callback=self.add_log)
-        load_dotenv()
 
+        load_dotenv()
         self.version = os.getenv("APP_VERSION")
+
         self.create_widgets()
         self.load_tasks()
         self.initialize_automod()
@@ -47,15 +50,18 @@ class App:
 
         self.add_task_button = tk.Button(toolbar_frame, text="Новая задача", command=self.add_task)
         self.add_task_button.pack(side=tk.LEFT, padx=2, pady=2)
-
         self.edit_task_button = tk.Button(toolbar_frame, text="Изменить", command=self.edit_task)
         self.edit_task_button.pack(side=tk.LEFT, padx=2, pady=2)
-
         self.remove_task_button = tk.Button(toolbar_frame, text="Удалить", command=self.remove_task)
         self.remove_task_button.pack(side=tk.LEFT, padx=2, pady=2)
-
         self.exclude_button = tk.Button(toolbar_frame, text="Исключения", command=self.open_exclude_window)
         self.exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
+        self.settings_button = tk.Button(toolbar_frame, text="Настройки", command=self.open_settings)
+        self.settings_button.pack(side=tk.LEFT, padx=2, pady=2)
+
+        # Версия (можно добавить иконку)
+        version_label = tk.Label(toolbar_frame, text=f"Версия: {self.version}", fg="grey")
+        version_label.pack(side=tk.RIGHT, padx=10, pady=2)
 
         self.tree = ttk.Treeview(self.root, columns=("Source", "Target", "Exclusions"), show="headings", height=10)
         self.tree.heading("Source", text="Исходная папка")
@@ -68,43 +74,31 @@ class App:
 
         bottom_frame = tk.Frame(self.root)
         bottom_frame.pack(fill=tk.X, pady=5)
-
         self.start_button = tk.Button(bottom_frame, text="Старт", command=self.start_monitoring)
         self.start_button.pack(side=tk.LEFT, padx=10, pady=5)
-
         self.stop_button = tk.Button(bottom_frame, text="Стоп", command=self.stop_monitoring)
         self.stop_button.pack(side=tk.LEFT, padx=10, pady=5)
-
         self.automod_button = tk.Button(bottom_frame, text="Автомод", command=self.toggle_automod)
         self.automod_button.pack(side=tk.RIGHT, padx=10, pady=5)
-
         self.status_label = tk.Label(bottom_frame, text="Статус: Приостановлен", fg="red")
         self.status_label.pack(side=tk.LEFT, padx=20)
-
-        self.counter_label = tk.Label(bottom_frame, text=f"Следующее обновление через: {self.monitor.interval}с")
+        self.counter_label = tk.Label(
+            bottom_frame,
+            text=f"Следующее обновление через: {self.format_time_dynamic(self.monitor.interval)}"
+        )
         self.counter_label.pack(side=tk.RIGHT, padx=20)
-
-        self.settings_button = tk.Button(toolbar_frame, text="Настройки", command=self.open_settings)
-        self.settings_button.pack(side=tk.LEFT, padx=2, pady=2)
-
-        # image = Image.open("res/icon.png")
-        #image = image.resize((16, 16), Image.LANCZOS)
-        #self.icon = ImageTk.PhotoImage(image)
-        version_label = tk.Label(toolbar_frame, text=f"Версия: {self.version}", fg="grey", #image=self.icon,
-                                 compound=tk.LEFT)
-        version_label.pack(side=tk.RIGHT, padx=10, pady=2)
 
     def add_task(self):
         source_folder = filedialog.askdirectory(title="Выберите исходную папку")
         target_folder = filedialog.askdirectory(title="Выберите целевую папку")
         if source_folder and target_folder:
             self.source_folders[source_folder] = target_folder
-            self.exclude_managers[source_folder] = ExcludeManager(source_folder)#
-            self.database.add_task(source_folder, target_folder)
+            self.exclude_managers[source_folder] = ExcludeManager(source_folder)
             self.update_tree()
-            if self.monitoring_thread and self.monitoring_thread.is_alive():#TODO проверить работает ли
-                messagebox.showinfo("Перезапуск службы",
-                                    "Вы добавили новую задачу. Пожалуйста, перезапустите мониторинг.")
+            if self.monitoring_thread and self.monitoring_thread.is_alive():
+                messagebox.showinfo(
+                    "Перезапуск службы", "Вы добавили новую задачу. Пожалуйста, перезапустите мониторинг."
+                )
 
     def edit_task(self):
         selected_item = self.tree.selection()
@@ -124,9 +118,8 @@ class App:
     def update_tree(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
-
         tasks = self.database.get_tasks()
-        for source, target, exclusions in tasks:#TODO проверить работает ли
+        for source, target, exclusions in tasks:
             exclusion_list = exclusions.split(',') if exclusions else []
             exclusion_names = ', '.join(exclusion_list)
             self.tree.insert("", tk.END, values=(source, target, exclusion_names))
@@ -160,17 +153,16 @@ class App:
         if not self.source_folders:
             messagebox.showwarning("Предупреждение", "Пожалуйста, добавьте хотя бы одну задачу!")
             return
-
         self.monitor = Monitor(self.database, log_callback=self.add_log)
-
         source_list = list(self.source_folders.keys())
         target_list = list(self.source_folders.values())
         threading_exclude_managers = [self.exclude_managers[src] for src in source_list]
-
-        self.monitoring_thread = threading.Thread(target=self.monitor.start, args=(source_list, target_list, threading_exclude_managers), daemon=True)
+        self.monitoring_thread = threading.Thread(
+            target=self.monitor.start, args=(source_list, target_list, threading_exclude_managers), daemon=True
+        )
         self.monitoring_thread.start()
-
         self.status_label.config(text="Статус: Запущен", fg="green")
+        self.update_counter()
         messagebox.showinfo("Информация", "Мониторинг начался")
 
     def stop_monitoring(self):
@@ -197,7 +189,6 @@ class App:
         current_state = self.database.get_automod_state()
         state_text = "Вкл" if current_state else "Выкл"
         self.automod_button.config(text=f"Автомод: {state_text}")
-
         if current_state:
             self.start_monitoring()
 
@@ -207,24 +198,8 @@ class App:
         self.database.set_automod_state(new_state)
         state_text = "Вкл" if new_state else "Выкл"
         self.automod_button.config(text=f"Автомод: {state_text}")
-
         if new_state:
             self.start_monitoring()
-
-    def start_monitoring(self):
-        if not self.source_folders:
-            messagebox.showwarning("Предупреждение", "Пожалуйста, добавьте хотя бы одну задачу!")
-            return
-
-        self.monitor = Monitor(self.database, log_callback=self.add_log)
-        source_list = list(self.source_folders.keys())
-        target_list = list(self.source_folders.values())
-        threading_exclude_managers = [self.exclude_managers[src] for src in source_list]
-        self.monitoring_thread = threading.Thread(target=self.monitor.start, args=(source_list, target_list, threading_exclude_managers), daemon=True)
-        self.monitoring_thread.start()
-        self.status_label.config(text="Статус: Запущен", fg="green")
-        self.update_counter()
-        messagebox.showinfo("Информация", "Мониторинг начался")
 
     def update_counter(self):
         if self.monitoring_thread and self.monitoring_thread.is_alive():
@@ -233,17 +208,37 @@ class App:
             else:
                 new_interval = self.database.get_monitoring_period_seconds()
                 self.monitor.interval = int(new_interval)
-
-
-            self.counter_label.config(text=f"Следующее обновление через: {self.monitor.interval}с")
+            self.counter_label.config(
+                text=f"Следующее обновление через: {self.format_time_dynamic(self.monitor.interval)}"
+            )
             self.root.after(1000, self.update_counter)
+
+    def format_time_dynamic(self, seconds):
+        if seconds >= 3600:
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            if minutes == 0:
+                return f"{hours} ч"
+            else:
+                return f"{hours}:{minutes:02d}"
+        elif seconds >= 60:
+            minutes = seconds // 60
+            sec = seconds % 60
+            if minutes <= 2:  # последние 2 минуты детализируем до минут:секунд
+                return f"{minutes}:{sec:02d}"
+            else:
+                return f"{minutes} м"
+        else:
+            return f"{seconds} с"
 
     def open_settings(self):
         SettingsWindow(self.root, self.database, self.monitor, on_save_callback=self.on_settings_saved)
 
     def on_settings_saved(self):
         self.monitor.interval = self.database.get_monitoring_period_seconds()
-        self.counter_label.config(text=f"Следующее обновление через: {self.monitor.interval}с")
+        self.counter_label.config(
+            text=f"Следующее обновление через: {self.format_time_dynamic(self.monitor.interval)}"
+        )
 
     def open_exclude_window(self):
         selected_item = self.tree.selection()
