@@ -2,6 +2,7 @@ import time
 import os
 from file_handler import FileHandler
 
+
 class Monitor:
     def __init__(self, database, log_callback=None):
         self.file_handler = FileHandler()
@@ -22,6 +23,8 @@ class Monitor:
                     os.makedirs(archive_folder, exist_ok=True)
                     if self.log_callback:
                         self.log_callback(f"Создана папка архива: {archive_folder}")
+                    exclude_manager.add(archive_folder)
+
                 self.check_changes(source_folder, target_folder, exclude_manager)
             time.sleep(self.interval)
 
@@ -31,6 +34,8 @@ class Monitor:
     def check_changes(self, source_folder, target_folder, exclude_manager):
         norm = lambda path: os.path.normpath(path).replace('\\', '/')
         for root, dirs, files in os.walk(source_folder):
+            if root != source_folder:
+                continue
             for file in files:
                 src_file_path = norm(os.path.join(root, file))
                 if not exclude_manager.is_excluded(src_file_path):

@@ -21,13 +21,13 @@ class ExcludeManager:
 
     def is_excluded(self, file_path):
         path = os.path.normpath(file_path).replace('\\', '/')
-        print('Проверяем файл:', path)
+        #print('Проверяем файл:', path)
         for exc in self.excluded_paths:
             exc_path = os.path.normpath(exc).replace('\\', '/')
             if os.path.isfile(exc_path):
                 if path == exc_path:
                     return True
             elif os.path.isdir(exc_path):
-                if path.startswith(exc_path + '/'):
+                if os.path.commonpath([exc_path, path]) == exc_path:
                     return True
         return False
