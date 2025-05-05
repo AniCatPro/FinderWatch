@@ -53,7 +53,7 @@ class FileDatabase:
 
     def add_task(self, source, target):
         with self.connection:
-            self.connection.execute("""
+            self.connection.execute(""" 
                 INSERT INTO tasks (source, target) VALUES (?, ?)
                 ON CONFLICT(source) DO UPDATE SET target=excluded.target
             """, (source, target))
@@ -112,6 +112,16 @@ class FileDatabase:
         seconds = seconds % 60
         return "{:02d}:{:02d}:{:02d}".format(hours, minutes, seconds)
 
+    def get_target_folder(self, source_folder):
+        cur = self.connection.cursor()
+        cur.execute("SELECT target FROM tasks WHERE source = ?", (source_folder,))
+        row = cur.fetchone()
+        if row and row[0]:
+            return os.path.normpath(row[0]).replace("\\", "/")
+        archive_path = os.path.normpath(os.path.join(source_folder, "АРХИВ")).replace("\\", "/")
+        if not os.path.exists(archive_path):
+            os.makedirs(archive_path)
+        return archive_path
 
     def get_file_versions(self, path):
         cur = self.connection.cursor()

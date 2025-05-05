@@ -12,6 +12,7 @@ from exclude import ExcludeManager
 from database import FileDatabase
 from settings import SettingsWindow
 from exclude_manager import ExcludeWindow
+import shutil
 
 class App:
     def __init__(self, root):
@@ -58,6 +59,8 @@ class App:
         self.exclude_button.pack(side=tk.LEFT, padx=2, pady=2)
         self.settings_button = tk.Button(toolbar_frame, text="Настройки", command=self.open_settings)
         self.settings_button.pack(side=tk.LEFT, padx=2, pady=2)
+        self.move_archive_button = tk.Button(toolbar_frame, text="Перенести архив", command=self.move_archive)
+        self.move_archive_button.pack(side=tk.LEFT, padx=2, pady=2)
 
         # Версия (можно добавить иконку)
         version_label = tk.Label(toolbar_frame, text=f"Версия: {self.version}", fg="grey")
@@ -90,28 +93,29 @@ class App:
 
     def add_task(self):
         source_folder = filedialog.askdirectory(title="Выберите исходную папку")
-        target_folder = filedialog.askdirectory(title="Выберите целевую папку")
-        if source_folder and target_folder:
+        if source_folder:
+            target_folder = os.path.normpath(os.path.join(source_folder, "АРХИВ")).replace("\\", "/")
             self.source_folders[source_folder] = target_folder
-            self.exclude_managers[source_folder] = ExcludeManager(source_folder)
+            exclude_manager = ExcludeManager(source_folder)
+            exclude_manager.add("АРХИВ")
+            self.exclude_managers[source_folder] = exclude_manager
+            self.database.add_task(source_folder, target_folder)
+            self.database.set_exclusions(source_folder, [target_folder])
             self.update_tree()
             if self.monitoring_thread and self.monitoring_thread.is_alive():
-                messagebox.showinfo(
-                    "Перезапуск службы", "Вы добавили новую задачу. Пожалуйста, перезапустите мониторинг."
-                )
+                messagebox.showinfo("Перезапуск службы",
+                                    "Вы добавили новую задачу. Пожалуйста, перезапустите мониторинг.")
 
     def edit_task(self):
         selected_item = self.tree.selection()
         if selected_item:
             values = self.tree.item(selected_item, "values")
             source_folder = values[0]
-            new_source_folder = filedialog.askdirectory(title="Выберите новую исходную папку")
-            new_target_folder = filedialog.askdirectory(title="Выберите новую целевую папку")
-            if new_source_folder and new_target_folder:
+            new_source_folder = filedialog.askdirectory(title="Выберите новую исходную папку", initialdir=source_folder)
+            if new_source_folder:
+                new_target_folder = self.database.get_target_folder(new_source_folder)  # Получаем путь к АРХИВУ внутри new_source_folder
                 del self.source_folders[source_folder]
                 del self.exclude_managers[source_folder]
-                self.source_folders[new_source_folder] = new_target_folder
-                self.exclude_managers[new_source_folder] = ExcludeManager(new_source_folder)
                 self.database.add_task(new_source_folder, new_target_folder)
                 self.update_tree()
 
@@ -148,6 +152,28 @@ class App:
                 self.exclude_managers[source_folder].remove(exclude_path)
                 self.database.remove_exclude(source_folder, exclude_path)
                 self.update_tree()
+
+    def move_archive(self):
+        new_target_dir = filedialog.askdirectory(title="Выберите новую директорию для архива")
+        if not new_target_dir:
+            return
+
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showwarning("Предупреждение", "Выберите задачу для переноса архива.")
+            return
+
+        values = self.tree.item(selected_item, "values")
+        source_folder = values[0]
+        current_target_folder = self.database.get_target_folder(source_folder)  # Получаем текущий путь к архиву
+
+        try:
+            shutil.move(current_target_folder, new_target_dir)  # Перемещаем архив
+            self.database.add_task(source_folder, new_target_dir)  # Обновляем путь в базе данных
+            self.update_tree()
+            messagebox.showinfo("Успех", f"Архив для {source_folder} перемещен в {new_target_dir}")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Ошибка при перемещении архива: {e}")
 
     def start_monitoring(self):
         if not self.source_folders:

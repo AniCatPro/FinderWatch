@@ -14,6 +14,14 @@ class Monitor:
         self.running = True
         while self.running:
             for source_folder, target_folder, exclude_manager in zip(source_folders, target_folders, exclude_managers):
+                if not target_folder.endswith("АРХИВ"):
+                    archive_folder = os.path.normpath(os.path.join(target_folder, "АРХИВ"))
+                else:
+                    archive_folder = os.path.normpath(target_folder)
+                if not os.path.exists(archive_folder):
+                    os.makedirs(archive_folder, exist_ok=True)
+                    if self.log_callback:
+                        self.log_callback(f"Создана папка архива: {archive_folder}")
                 self.check_changes(source_folder, target_folder, exclude_manager)
             time.sleep(self.interval)
 
