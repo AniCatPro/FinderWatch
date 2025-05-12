@@ -154,8 +154,11 @@ class App:
                 self.update_tree()
 
     def move_archive(self):
-        new_target_dir = filedialog.askdirectory(title="Выберите новую директорию для архива")
-        if not new_target_dir:
+        from exclude import ExcludeManager
+        import shutil, os
+
+        new_parent_dir = filedialog.askdirectory(title="Выберите новую директорию для архива")
+        if not new_parent_dir:
             return
 
         selected_item = self.tree.selection()
@@ -165,14 +168,50 @@ class App:
 
         values = self.tree.item(selected_item, "values")
         source_folder = values[0]
-        current_target_folder = self.database.get_target_folder(source_folder)  # Получаем текущий путь к архиву
+        current_archive = self.database.get_target_folder(source_folder)
+        new_archive = os.path.normpath(os.path.join(new_parent_dir, "АРХИВ")).replace("\\", "/")
+        print(f"Текущее положение архива: {current_archive}")
+        print(f"Новое положение архива: {new_archive}")
+
+        if not os.path.exists(current_archive):
+            messagebox.showerror(
+                "Ошибка",
+                f"Исходная папка архива не найдена:\n{current_archive}"
+            )
+            return
+        if os.path.exists(new_archive):
+            messagebox.showerror(
+                "Ошибка",
+                f"Папка АРХИВ уже существует в целевой директории:\n{new_archive}"
+            )
+            return
 
         try:
-            shutil.move(current_target_folder, new_target_dir)  # Перемещаем архив
-            self.database.add_task(source_folder, new_target_dir)  # Обновляем путь в базе данных
+            shutil.move(current_archive, new_archive)
+            print("Архив ПЕРЕМЕЩЕН.")
+            self.database.add_task(source_folder, new_archive)
+            old_exclusions = self.database.get_exclusions(source_folder)
+            new_exclusions = []
+            for exc in old_exclusions:
+                if exc.startswith(current_archive):
+                    new_exc = exc.replace(current_archive, new_archive, 1)
+                    new_exclusions.append(new_exc)
+                else:
+                    new_exclusions.append(exc)
+            self.database.set_exclusions(source_folder, new_exclusions)
+            exclude_manager = ExcludeManager(source_folder)
+            for exc in new_exclusions:
+                exclude_manager.add(exc)
+            self.exclude_managers[source_folder] = exclude_manager
             self.update_tree()
-            messagebox.showinfo("Успех", f"Архив для {source_folder} перемещен в {new_target_dir}")
+            messagebox.showinfo(
+                "Успех",
+                f"Архив для '{source_folder}' успешно перемещён в {new_archive}\n"
+                f"Все исключения обновлены."
+            )
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             messagebox.showerror("Ошибка", f"Ошибка при перемещении архива: {e}")
 
     def start_monitoring(self):
