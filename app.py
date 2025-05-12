@@ -218,6 +218,13 @@ class App:
         if not self.source_folders:
             messagebox.showwarning("Предупреждение", "Пожалуйста, добавьте хотя бы одну задачу!")
             return
+
+        # ------------------- unicode_normalizer.py -------------------
+        from unicode_normalizer import normalize_filenames
+        for folder in self.source_folders.keys():
+            normalize_filenames(folder, log_callback=self.add_log)
+        # -------------------------------------------------------------
+
         self.monitor = Monitor(self.database, log_callback=self.add_log)
         source_list = list(self.source_folders.keys())
         target_list = list(self.source_folders.values())
