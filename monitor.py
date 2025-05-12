@@ -33,9 +33,14 @@ class Monitor:
 
     def check_changes(self, source_folder, target_folder, exclude_manager):
         norm = lambda path: os.path.normpath(path).replace('\\', '/')
+        archive_folder = norm(target_folder)  # Путь к архиву (у тебя это обычно .../АРХИВ)
         for root, dirs, files in os.walk(source_folder):
-            if root != source_folder:
-                continue
+            # Не заходим в сам архив и исключённые папки
+            dirs[:] = [
+                d for d in dirs
+                if
+                not exclude_manager.is_excluded(os.path.join(root, d)) and norm(os.path.join(root, d)) != archive_folder
+            ]
             for file in files:
                 src_file_path = norm(os.path.join(root, file))
                 if not exclude_manager.is_excluded(src_file_path):
